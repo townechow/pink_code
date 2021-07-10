@@ -9,7 +9,7 @@ export default defineConfig({
     { path: '/template/index/', component: '@/pages/template/index' },
     { path: '/template/form/', component: '@/pages/template/form' },
     { path: '/template/antdTableHook/', component: '@/pages/template/antdTableHook' },
-    { path: '/template/editTable/', component: '@/pages/editTable' },
+    { path: '/editTable/', component: '@/pages/editTable' },
   ],
   fastRefresh: {},
 });
