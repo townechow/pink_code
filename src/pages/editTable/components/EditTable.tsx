@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, {
+    useState,
+    useCallback,
+    useRef,
+    forwardRef,
+    useImperativeHandle,
+} from 'react';
 import {
     Table,
     Input,
@@ -10,18 +16,28 @@ import {
     Radio,
     Button,
 } from 'antd';
+import { ColumnsType, ColumnType } from 'antd/es/table';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
 interface propsT<recordT> {
     originData: recordT[]
     initRow: recordT
-    columns: any[]
+    columns: columnsT<recordT>
     // refSup: any
 }
-
+export declare type columnsT<recordT = unknown> = columnT<recordT>[];
+export interface columnT<recordT> extends ColumnType<recordT> {
+    editable?: boolean
+    inputType?: "text" | "number" | "radio"
+    radioOps?: radioT[]
+}
+interface radioT {
+    label: string
+    value: any
+}
 interface T {
-    key: string
+    rowKey: string
 }
 export interface sendToParentT<recordT> {
     data: recordT[]
@@ -35,15 +51,20 @@ const EditableCell = ({
     inputType,
     record,
     index,
+    radioOps = [],
     children,
     ...restProps
 }: any) => {
+
     let inputNode = <Input />;
 
     if (inputType === 'radio') {
         inputNode = <Radio.Group >
-            <Radio value={"male"}>male</Radio>
-            <Radio value={"female"}>female</Radio>
+            {
+                radioOps.map((op: radioT) => {
+                    return <Radio key={op.label} value={op.value}>{op.label}</Radio>
+                })
+            }
         </Radio.Group>
     }
     if (inputType === 'number') {
@@ -115,27 +136,28 @@ function EditableTable<recordT extends T>(props: propsT<recordT>, ref: any) {
     const [form] = Form.useForm();
     const [data, setData] = useState<recordT[]>(originData);
     const [editingKey, setEditingKey] = useState('');
+    const [newRowKey, setNewRowKey] = useState('');
     const refTable = useRef(null);
-    const isEditing = (record: recordT) => record.key === editingKey;
+    const isEditing = (record: recordT) => record.rowKey === editingKey;
 
     const edit = (record: recordT) => {
         form.setFieldsValue({
             ...initRow,
             ...record,
         });
-        setEditingKey(record.key);
+        setEditingKey(record.rowKey);
     };
     const deleteRow = (record: recordT) => {
-        const dataSub = data.filter(row => row.key !== record.key)
+        const dataSub = data.filter(row => row.rowKey !== record.rowKey)
         setData(dataSub)
     };
     const addRow = (record: recordT) => {
-        const newRowKey = record.key ? record.key + Date.now() : String(Date.now())
-        let newRow = { ...initRow, key: newRowKey }
+        const newRowKey = record.rowKey ? record.rowKey + Date.now() : String(Date.now())
+        let newRow = { ...initRow, rowKey: newRowKey }
         const newData = [...data];
-        const index = newData.findIndex((row) => record.key === row.key);
+        const index = newData.findIndex((row) => record.rowKey === row.rowKey);
         if (index > -1) {
-            newRow = { ...record, key: newRowKey }
+            newRow = { ...record, rowKey: newRowKey }
             newData.splice(index + 1, 0, newRow);
             setData(newData);
             edit(newRow)
@@ -144,16 +166,18 @@ function EditableTable<recordT extends T>(props: propsT<recordT>, ref: any) {
             setData(newData);
             edit(newRow)
         }
+        setNewRowKey(newRowKey)
     };
     const cancel = () => {
+        setData(data.filter(item => item.rowKey !== newRowKey));
         setEditingKey('');
     };
 
-    const save = async (key: string) => {
+    const save = async (rowKey: string) => {
         try {
             const row = await form.validateFields();
             const newData = [...data];
-            const index = newData.findIndex((item) => key === item.key);
+            const index = newData.findIndex((item) => rowKey === item.rowKey);
 
             if (index > -1) {
                 const item = newData[index];
@@ -180,7 +204,7 @@ function EditableTable<recordT extends T>(props: propsT<recordT>, ref: any) {
                 return isEditingRow ? (
                     <span>
                         <a
-                            onClick={() => save(record.key)}
+                            onClick={() => save(record.rowKey)}
                             style={{
                                 marginRight: 8,
                             }}
@@ -223,6 +247,7 @@ function EditableTable<recordT extends T>(props: propsT<recordT>, ref: any) {
                 dataIndex: col.dataIndex,
                 title: col.title,
                 editing: isEditing(record),
+                radioOps: col.radioOps
             }),
         };
     });
@@ -249,7 +274,7 @@ function EditableTable<recordT extends T>(props: propsT<recordT>, ref: any) {
     })
     // console.log("datadata==", data);
     return (
-        <div ref={refTable}>
+        <div ref={refTable} className="edit-sort-table">
             <Button disabled={editingKey !== ''} type={"primary"} style={{ marginBottom: 20 }} onClick={() => addRow(initRow)}>addRow</Button>
             <DndProvider backend={HTML5Backend}>
                 <Form form={form} component={false}>
@@ -262,13 +287,15 @@ function EditableTable<recordT extends T>(props: propsT<recordT>, ref: any) {
                         }}
                         bordered
                         dataSource={data}
-                        columns={mergedColumns}
+                        columns={mergedColumns as ColumnsType<recordT>}
                         rowClassName="editable-row"
                         pagination={false}
                         onRow={(_record, index) => ({
                             index,
                             moveRow,
                         }) as any}
+                        rowKey={"rowKey"}
+                        style={{ pointerEvents: data.length ? "all" : "none" }}
                     />
                 </Form>
             </DndProvider>

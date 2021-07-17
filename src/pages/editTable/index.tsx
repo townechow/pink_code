@@ -2,22 +2,17 @@ import React, { useRef } from 'react';
 import {
     Layout,
     Button,
-    Popconfirm,
-    Form,
-    Typography,
     Divider,
-    Space,
 } from 'antd';
 const { Header, Content, Footer } = Layout;
-import EditTable, { sendToParentT } from "./components/EditTable";
-
-
+import EditTable, { sendToParentT, columnsT } from "./components/EditTable";
+import './style.less'
 interface recordT {
-    key: string
+    rowKey: string
     name: string
     age: number
     address: string
-    gender: "male" | "female"
+    gender: number
     country: 'china'
 }
 
@@ -25,24 +20,24 @@ const originData: recordT[] = [];
 
 for (let i = 0; i < 5; i++) {
     originData.push({
-        key: i.toString(),
+        rowKey: i.toString(),
         name: `Edrward ${i}`,
         age: 18,
         address: `London Park no. ${i}`,
-        gender: i % 2 === 0 ? "male" : "female",
+        gender: i % 2 === 0 ? 0 : 1,
         country: 'china'
     });
 }
 
 const initRow: recordT = {
-    key: '',
+    rowKey: '',
     name: "Edrward 100",
     age: 18,
     address: "London Park no. 100",
-    gender: "female",
+    gender: 1,
     country: 'china',
 }
-const columns = [
+const columns: columnsT<recordT> = [
     {
         title: 'name',
         dataIndex: 'name',
@@ -59,7 +54,9 @@ const columns = [
         title: 'gender',
         dataIndex: 'gender',
         editable: true,
-        inputType: "radio"
+        inputType: "radio",
+        radioOps: [{ label: "male", value: 1 }, { label: "female", value: 0 }, { label: "unknown", value: 1.5 }],
+        render: (val) => val === 1 ? "male" : val === 0 ? "female" : "unknown"
     },
     {
         title: 'address',
@@ -88,15 +85,15 @@ const IndexPage = () => {
             <Header>
                 <div className="logo" />
             </Header>
-            <Content style={{ padding: '0 50px' }}>
+            <Content style={{ padding: '0 40px' }}>
                 <Divider>可编辑、拖拽排序table</Divider>
                 <EditTable
                     originData={originData}
                     initRow={initRow}
                     ref={tableRef}
-                    columns={columns}
+                    columns={columns as any}
                 />
-                <Button style={{marginTop:24}} onClick={getData} type={"primary"}>submit</Button>
+                <Button style={{ marginTop: 24 }} onClick={getData} type={"primary"}>submit</Button>
                 <Divider></Divider>
             </Content>
             <Footer style={{ textAlign: 'center' }}> xiao_feiji</Footer>
